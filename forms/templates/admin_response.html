@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Response #{{ response.id }} · {{ form.title }}</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --fg: #111;
+    --muted: #999;
+    --line: #e5e5e2;
+    --accent: #b45309;
+    --danger: #dc2626;
+    --card: #fff;
+    --input-bg: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c0a09;
+      --fg: #f5f5f4;
+      --muted: #78716c;
+      --line: #292524;
+      --accent: #fbbf24;
+      --danger: #f87171;
+      --card: #1c1917;
+      --input-bg: #0c0a09;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  nav.crumbs {
+    max-width: 780px; margin: 0 auto; padding: 1rem 1.5rem 0;
+    font-size: 0.8rem; color: var(--muted);
+  }
+
+  main { max-width: 780px; margin: 0 auto; padding: 1.5rem 1.5rem 4rem; }
+
+  header.card-head {
+    padding-bottom: 1.25rem;
+    border-bottom: 2px solid var(--fg);
+    margin-bottom: 2rem;
+  }
+  header.card-head h1 {
+    font-size: 1.8rem; font-weight: 500; letter-spacing: -0.02em;
+    margin: 0 0 0.5rem;
+  }
+  header.card-head .sub {
+    color: var(--muted); font-size: 0.85rem;
+  }
+  header.card-head .sub .sep { margin: 0 0.4rem; opacity: 0.5; }
+  header.card-head .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  .field { margin: 1.5rem 0; page-break-inside: avoid; break-inside: avoid; }
+  .field .label {
+    font-size: 0.75rem; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--muted);
+    margin-bottom: 0.35rem;
+  }
+  .field .desc { color: var(--muted); font-size: 0.8rem; margin-bottom: 0.35rem; }
+  .field .value {
+    padding: 0.55rem 0.75rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    white-space: pre-wrap; word-break: break-word;
+    min-height: 1.6em;
+  }
+  .field .value.empty { color: var(--muted); font-style: italic; }
+  .field .value.long { min-height: 3em; }
+
+  .md-block {
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--line);
+    background: var(--card);
+    border-radius: 4px;
+  }
+  .md-block p:first-child { margin-top: 0; }
+  .md-block p:last-child { margin-bottom: 0; }
+
+  .choices { display: flex; flex-direction: column; gap: 0.2rem; }
+  .choice {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.15rem 0;
+    color: var(--muted);
+  }
+  .choice.selected { color: var(--fg); font-weight: 500; }
+  .choice .mark { font-size: 1.05rem; line-height: 1; width: 1.1em; display: inline-block; text-align: center; }
+
+  .checkbox-line { display: flex; align-items: center; gap: 0.5rem; }
+  .checkbox-line .mark { font-size: 1.15rem; }
+
+  .signature {
+    padding: 0.5rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    text-align: center;
+  }
+  .signature img {
+    max-width: 100%;
+    max-height: 160px;
+    display: block;
+    margin: 0 auto;
+    /* invert dark signatures when the page is light-on-dark */
+  }
+  @media (prefers-color-scheme: dark) {
+    .signature img { filter: invert(1); }
+  }
+  .signature .typed {
+    font-family: "Snell Roundhand", "Apple Chancery", cursive;
+    font-size: 1.75rem;
+    padding: 0.5rem 0;
+  }
+
+  .file-link {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--fg);
+  }
+  .file-link:hover { border-color: var(--accent); text-decoration: none; }
+  .file-link .name { font-weight: 500; }
+  .file-link .size { color: var(--muted); font-size: 0.8rem; }
+
+  footer.card-foot {
+    margin-top: 3rem; padding-top: 1rem;
+    border-top: 1px solid var(--line);
+    color: var(--muted); font-size: 0.75rem;
+    line-height: 1.7;
+  }
+  footer.card-foot .row { display: flex; gap: 1rem; flex-wrap: wrap; }
+  footer.card-foot .k { display: inline-block; min-width: 5.5em; color: var(--muted); }
+  footer.card-foot .v { color: var(--fg); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; word-break: break-all; }
+
+  /* Print CSS lives in a follow-up commit. */
+</style>
+</head>
+<body>
+
+<nav class="crumbs no-print">
+  <a href="/admin">admin</a> ·
+  <a href="/admin/{{ form.slug }}">{{ form.title }}</a> ·
+  response #{{ response.id }}
+</nav>
+
+<main>
+  <header class="card-head">
+    <h1>{{ form.title }}</h1>
+    <div class="sub">
+      Signed by <strong>{{ signer_name }}</strong>
+      on {{ response.submitted_at_display or '—' }}
+      <span class="sep">·</span>
+      response <span class="mono">#{{ response.id }}</span>
+      <span class="sep">·</span>
+      form v{{ response.form_version }}
+    </div>
+  </header>
+
+  {% for f in fields %}
+    {% set ans = answers.get(f.name) %}
+    <div class="field" data-kind="{{ f.kind }}">
+
+      {% if f.kind == 'markdown' %}
+        <div class="md-block">{{ (f.config.html_safe if f.config.html_safe else md_render(f.description or f.label))|safe }}</div>
+
+      {% else %}
+        <div class="label">{{ f.label }}</div>
+        {% if f.description %}<div class="desc">{{ f.description }}</div>{% endif %}
+
+        {% if f.kind == 'signature' %}
+          {% if ans and ans is mapping and ans.blob_id %}
+            <div class="signature">
+              {% if ans.mime == 'application/json' %}
+                {# typed-mode signature — the JSON blob holds {"typed": "..."} #}
+                <div class="typed">{{ typed_sig_texts.get(f.name) or signer_name }}</div>
+              {% else %}
+                <img src="/blobs/{{ ans.blob_id }}/preview" alt="signature">
+              {% endif %}
+            </div>
+          {% else %}
+            <div class="value empty">(no signature)</div>
+          {% endif %}
+
+        {% elif f.kind == 'file' %}
+          {% if ans and ans is mapping and ans.blob_id %}
+            <a class="file-link" href="/blobs/{{ ans.blob_id }}" download>
+              <span class="name">{{ ans.filename or ('blob-' ~ ans.blob_id) }}</span>
+              <span class="size">{{ human_size(ans.size) }}</span>
+            </a>
+          {% else %}
+            <div class="value empty">(no file)</div>
+          {% endif %}
+
+        {% elif f.kind == 'checkbox' %}
+          <div class="checkbox-line">
+            <span class="mark">{{ '☑' if ans else '☐' }}</span>
+            <span>{{ f.config.check_label or f.label }}</span>
+          </div>
+
+        {% elif f.kind == 'radio' %}
+          <div class="choices">
+            {% for o in f.config.options %}
+              <div class="choice {% if ans == o.value %}selected{% endif %}">
+                <span class="mark">{{ '●' if ans == o.value else '○' }}</span>
+                <span>{{ o.label }}</span>
+              </div>
+            {% endfor %}
+          </div>
+
+        {% elif f.kind == 'multiselect' %}
+          <div class="choices">
+            {% for o in f.config.options %}
+              {% set on = ans and o.value in ans %}
+              <div class="choice {% if on %}selected{% endif %}">
+                <span class="mark">{{ '☑' if on else '☐' }}</span>
+                <span>{{ o.label }}</span>
+              </div>
+            {% endfor %}
+          </div>
+
+        {% elif f.kind == 'long_text' %}
+          {% if ans %}
+            <div class="value long">{{ ans }}</div>
+          {% else %}
+            <div class="value empty">(blank)</div>
+          {% endif %}
+
+        {% else %}
+          {# short_text, email, phone, date — plain string answer #}
+          {% if ans %}
+            <div class="value">{{ ans }}</div>
+          {% else %}
+            <div class="value empty">(blank)</div>
+          {% endif %}
+        {% endif %}
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <footer class="card-foot">
+    <div class="row">
+      <div><span class="k">Form</span> <span class="v">{{ form.slug }} · v{{ response.form_version }}</span></div>
+      <div><span class="k">Response</span> <span class="v">#{{ response.id }}</span></div>
+      <div><span class="k">Submitted</span> <span class="v">{{ response.submitted_at_display or '—' }}</span></div>
+    </div>
+    <div class="row">
+      <div><span class="k">Source IP</span> <span class="v">{{ response.client_ip or '—' }}</span></div>
+    </div>
+    <div class="row">
+      <div><span class="k">User agent</span> <span class="v">{{ response.user_agent or '—' }}</span></div>
+    </div>
+  </footer>
+</main>
+</body>
+</html>

@@ -1385,6 +1385,81 @@ def admin_form_page(slug):
     )
 
 
+@app.get("/admin/<slug>/responses/<int:rid>")
+def admin_response_page(slug, rid):
+    denied = require_admin()
+    if denied:
+        return denied
+    with db_lock:
+        form_row = form_by_slug(slug)
+        if not form_row:
+            return _public_error("Form not found.", 404)
+        r = db.execute(
+            """SELECT id, form_id, form_version, token_id, answers,
+                      submitted_at, client_ip, user_agent
+               FROM form_response WHERE id = ? AND form_id = ?""",
+            [rid, form_row[0]],
+        ).fetchone()
+        if not r:
+            return _public_error("Response not found.", 404)
+        fields = fields_for(form_row[0])
+
+    answers = json.loads(r[4]) if isinstance(r[4], str) else (r[4] or {})
+
+    # Typed-mode signatures store a JSON blob on disk; we don't want to
+    # ship a per-request disk read for each one in the template. Pre-load
+    # the "typed" strings here so the template just displays them.
+    typed_sig_texts: dict[str, str] = {}
+    for f in fields:
+        if f["kind"] != "signature":
+            continue
+        ans = answers.get(f["name"])
+        if (
+            isinstance(ans, dict)
+            and ans.get("mime") == "application/json"
+            and ans.get("blob_id")
+        ):
+            with db_lock:
+                brow = _blob_row(int(ans["blob_id"]))
+            if brow:
+                try:
+                    payload = json.loads(Path(brow[7]).read_bytes())
+                    typed_sig_texts[f["name"]] = payload.get("typed", "")
+                except Exception:  # noqa: BLE001
+                    pass
+
+    # Signer display name — same heuristic as the dashboard list.
+    signer_name = (
+        answers.get("legal_name")
+        or answers.get("name")
+        or answers.get("full_name")
+    )
+    if isinstance(signer_name, dict) or not signer_name:
+        signer_name = "anonymous"
+
+    form_dict = _form_dict(form_row, include_fields=False)
+    response_dict = {
+        "id": r[0],
+        "form_id": r[1],
+        "form_version": r[2],
+        "token_id": r[3],
+        "submitted_at_display": _fmt_ts(r[5]),
+        "client_ip": r[6],
+        "user_agent": r[7],
+    }
+
+    return render_template(
+        "admin_response.html",
+        form=form_dict,
+        response=response_dict,
+        fields=fields,
+        answers=answers,
+        signer_name=str(signer_name),
+        typed_sig_texts=typed_sig_texts,
+        md_render=lambda s: md.markdown(s or ""),
+    )
+
+
 # ═════════════════════════════════════════════════════════════════════════
 #  Public form filler  (Host: f.kelliher.info)
 # ═════════════════════════════════════════════════════════════════════════
