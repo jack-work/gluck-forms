@@ -345,6 +345,111 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- JS glue for mint / revoke / material delete lives in a follow-up commit -->
+<script>
+(() => {
+  const slug = document.querySelector('main').dataset.slug;
+
+  const toast = (msg) => {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2000);
+  };
+
+  const jsonFetch = async (url, opts = {}) => {
+    opts.credentials = 'same-origin';
+    opts.headers = Object.assign({ 'Accept': 'application/json' }, opts.headers || {});
+    const r = await fetch(url, opts);
+    let body = null;
+    try { body = await r.json(); } catch (e) { /* 204 has no body */ }
+    if (!r.ok) {
+      const msg = (body && body.error) || `HTTP ${r.status}`;
+      throw new Error(msg);
+    }
+    return body;
+  };
+
+  // ── Mint token flow ────────────────────────────────────────────
+  const mintPanel = document.getElementById('mint-panel');
+  const mintReveal = document.getElementById('mint-reveal');
+  const mintUrl = document.getElementById('mint-url');
+  let mintRevealed = false;
+
+  document.getElementById('mint-toggle').addEventListener('click', () => {
+    mintPanel.classList.toggle('open');
+    if (!mintPanel.classList.contains('open')) mintReveal.classList.remove('open');
+  });
+  document.getElementById('mint-cancel').addEventListener('click', () => {
+    // If a token was just revealed, reload so the new row shows in the
+    // table. Otherwise just close the panel.
+    if (mintRevealed) { window.location.reload(); return; }
+    mintPanel.classList.remove('open');
+    mintReveal.classList.remove('open');
+  });
+
+  document.getElementById('mint-submit').addEventListener('click', async () => {
+    const hint = document.getElementById('mint-hint').value.trim() || null;
+    const days = parseInt(document.getElementById('mint-days').value, 10) || 30;
+    const usesRaw = document.getElementById('mint-uses').value.trim();
+    const max_uses = usesRaw ? parseInt(usesRaw, 10) : null;
+    const body = { expires_in_days: days };
+    if (hint) body.hint = hint;
+    if (max_uses) body.max_uses = max_uses;
+    try {
+      const res = await jsonFetch(`/forms/${slug}/tokens`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      mintUrl.textContent = res.url;
+      mintReveal.classList.add('open');
+      mintRevealed = true;
+    } catch (e) {
+      toast('Mint failed: ' + e.message);
+    }
+  });
+
+  document.getElementById('mint-copy').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(mintUrl.textContent);
+      toast('Copied to clipboard');
+    } catch (e) {
+      toast('Copy failed — select and copy manually');
+    }
+  });
+
+  // ── Revoke token ───────────────────────────────────────────────────
+  document.querySelectorAll('.token-revoke').forEach(btn => {
+    btn.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      const tid = btn.dataset.tid;
+      if (!confirm(`Revoke token #${tid}? This can't be undone.`)) return;
+      try {
+        await jsonFetch(`/tokens/${tid}/revoke`, { method: 'POST' });
+        toast(`Token #${tid} revoked`);
+        setTimeout(() => window.location.reload(), 200);
+      } catch (e) {
+        toast('Revoke failed: ' + e.message);
+      }
+    });
+  });
+
+  // ── Delete material ──────────────────────────────────────────────────
+  document.querySelectorAll('.material-del').forEach(btn => {
+    btn.addEventListener('click', async (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      const mid = btn.dataset.mid;
+      if (!confirm(`Remove material #${mid}?`)) return;
+      try {
+        await jsonFetch(`/forms/${slug}/materials/${mid}`, { method: 'DELETE' });
+        toast(`Material #${mid} removed`);
+        setTimeout(() => window.location.reload(), 200);
+      } catch (e) {
+        toast('Delete failed: ' + e.message);
+      }
+    });
+  });
+})();
+</script>
 </body>
 </html>
