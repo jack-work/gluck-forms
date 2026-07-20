@@ -468,7 +468,7 @@ def validate_field(field: dict, raw_value):
     return (None, f"unknown kind: {kind}")
 
 
-def validate_field_spec(spec: dict, ord_seen: set, name_seen: set):
+def validate_field_spec(spec: dict, ord_seen: set, name_seen: set, default_ord: int):
     name = spec.get("name") or ""
     if not FIELD_NAME_RE.match(name):
         return f"field name '{name}': must be [a-z_][a-z0-9_]*"
@@ -478,7 +478,11 @@ def validate_field_spec(spec: dict, ord_seen: set, name_seen: set):
     kind = spec.get("kind")
     if kind not in FIELD_KINDS:
         return f"field '{name}': kind must be one of {sorted(FIELD_KINDS)}"
-    ord_ = spec.get("ord")
+    # ord is optional — defaults to the field's position in the input
+    # array. Explicit values still get their duplicate-check.
+    if "ord" not in spec or spec.get("ord") is None:
+        spec["ord"] = default_ord
+    ord_ = spec["ord"]
     if not isinstance(ord_, int) or ord_ < 0:
         return f"field '{name}': ord must be a non-negative int"
     if ord_ in ord_seen:
@@ -616,8 +620,8 @@ def create_form():
 
     ord_seen: set = set()
     name_seen: set = set()
-    for f in fields:
-        err = validate_field_spec(f, ord_seen, name_seen)
+    for idx, f in enumerate(fields):
+        err = validate_field_spec(f, ord_seen, name_seen, idx)
         if err:
             return jsonify(error=err), 400
 
@@ -699,8 +703,8 @@ def update_form(slug):
                 return jsonify(error="fields must be a non-empty list"), 400
             ord_seen: set = set()
             name_seen: set = set()
-            for f in fields:
-                err = validate_field_spec(f, ord_seen, name_seen)
+            for idx, f in enumerate(fields):
+                err = validate_field_spec(f, ord_seen, name_seen, idx)
                 if err:
                     return jsonify(error=err), 400
             db.execute("DELETE FROM form_field WHERE form_id = ?", [row[0]])
