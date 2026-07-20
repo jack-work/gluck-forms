@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ form_title }}</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --fg: #111;
+    --muted: #999;
+    --line: #e5e5e2;
+    --accent: #b45309;
+    --danger: #dc2626;
+    --card: #fff;
+    --input-bg: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c0a09;
+      --fg: #f5f5f4;
+      --muted: #78716c;
+      --line: #292524;
+      --accent: #fbbf24;
+      --danger: #f87171;
+      --card: #1c1917;
+      --input-bg: #0c0a09;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+  header { margin-bottom: 2rem; }
+  h1 { font-size: 1.75rem; font-weight: 500; letter-spacing: -0.02em; margin: 0 0 0.5rem; }
+  .desc { color: var(--muted); }
+  .desc p:first-child { margin-top: 0; }
+  .desc p:last-child { margin-bottom: 0; }
+  .field { margin: 1.5rem 0; }
+  .field > label.top {
+    display: block; font-size: 0.85rem; font-weight: 500;
+    margin-bottom: 0.4rem; letter-spacing: -0.01em;
+  }
+  .field .hint { color: var(--muted); font-size: 0.8rem; margin-bottom: 0.4rem; }
+  .req { color: var(--accent); margin-left: 0.15rem; }
+  input[type=text], input[type=email], input[type=tel], input[type=date],
+  textarea, select {
+    width: 100%; padding: 0.55rem 0.7rem; font: inherit;
+    background: var(--input-bg); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 4px;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+  textarea { min-height: 5rem; resize: vertical; }
+  .choice { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; }
+  .choice input { width: auto; }
+  .err { color: var(--danger); font-size: 0.8rem; margin-top: 0.3rem; }
+  .field.has-error input, .field.has-error textarea, .field.has-error select,
+  .field.has-error .sigbox { border-color: var(--danger); }
+  .md-block { padding: 0.75rem 1rem; border-left: 3px solid var(--line); background: var(--card); border-radius: 4px; color: var(--fg); }
+  .md-block p:first-child { margin-top: 0; }
+  .md-block p:last-child { margin-bottom: 0; }
+  .actions { display: flex; justify-content: flex-end; margin-top: 2.5rem; }
+  button.submit { padding: 0.6rem 1.4rem; background: var(--accent); color: #fff; border: 1px solid var(--accent); border-radius: 4px; font: inherit; cursor: pointer; }
+  button.submit:hover { opacity: 0.9; }
+  footer { text-align: center; color: var(--muted); font-size: 0.72rem; margin-top: 3rem; }
+  /* Signature widget */
+  .sigwrap { display: flex; flex-direction: column; gap: 0.35rem; }
+  .sigtabs { display: flex; gap: 0.25rem; }
+  .sigtab { flex: 0 0 auto; padding: 0.3rem 0.75rem; font-size: 0.8rem; border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 4px; cursor: pointer; font: inherit; }
+  .sigtab.active { color: var(--accent); border-color: var(--accent); }
+  .sigbox { border: 1px solid var(--line); border-radius: 4px; background: var(--input-bg); touch-action: none; }
+  .sigbox canvas { display: block; width: 100%; height: 140px; cursor: crosshair; }
+  .sigclear { background: transparent; border: 0; color: var(--muted); font-size: 0.75rem; cursor: pointer; align-self: flex-start; padding: 0.2rem 0; }
+  .sigclear:hover { color: var(--fg); }
+  .sig-typed { font-family: "Snell Roundhand", "Apple Chancery", cursive; font-size: 1.5rem; padding: 0.75rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>{{ form_title }}</h1>
+    {% if form_description_html %}<div class="desc">{{ form_description_html|safe }}</div>{% endif %}
+  </header>
+
+  <form method="POST" action="/{{ token }}" enctype="multipart/form-data" novalidate>
+    {% for f in fields %}
+      {% set err = errors.get(f.name) %}
+      {% set val = values.get(f.name, '') %}
+      <div class="field {% if err %}has-error{% endif %}" data-kind="{{ f.kind }}">
+
+        {% if f.kind == 'markdown' %}
+          {# display-only: server-rendered markdown block #}
+          <div class="md-block">{{ f.config.html_safe if f.config.html_safe else (f.description or f.label) }}</div>
+
+        {% else %}
+          <label class="top" for="f_{{ f.name }}">
+            {{ f.label }}{% if f.required %}<span class="req">*</span>{% endif %}
+          </label>
+          {% if f.description %}<div class="hint">{{ f.description }}</div>{% endif %}
+
+          {% if f.kind == 'short_text' %}
+            <input id="f_{{ f.name }}" name="{{ f.name }}" type="text" value="{{ val }}"
+                   {% if f.config.max_length %}maxlength="{{ f.config.max_length }}"{% endif %}>
+
+          {% elif f.kind == 'long_text' %}
+            <textarea id="f_{{ f.name }}" name="{{ f.name }}"
+                      {% if f.config.max_length %}maxlength="{{ f.config.max_length }}"{% endif %}>{{ val }}</textarea>
+
+          {% elif f.kind == 'email' %}
+            <input id="f_{{ f.name }}" name="{{ f.name }}" type="email" value="{{ val }}" autocomplete="email">
+
+          {% elif f.kind == 'phone' %}
+            <input id="f_{{ f.name }}" name="{{ f.name }}" type="tel" value="{{ val }}" autocomplete="tel">
+
+          {% elif f.kind == 'date' %}
+            <input id="f_{{ f.name }}" name="{{ f.name }}" type="date" value="{{ val }}"
+                   {% if f.config.min %}min="{{ f.config.min }}"{% endif %}
+                   {% if f.config.max %}max="{{ f.config.max }}"{% endif %}>
+
+          {% elif f.kind == 'radio' %}
+            {% for o in f.config.options %}
+              <label class="choice">
+                <input type="radio" name="{{ f.name }}" value="{{ o.value }}"
+                       {% if val == o.value %}checked{% endif %}>
+                {{ o.label }}
+              </label>
+            {% endfor %}
+
+          {% elif f.kind == 'multiselect' %}
+            {% for o in f.config.options %}
+              <label class="choice">
+                <input type="checkbox" name="{{ f.name }}" value="{{ o.value }}"
+                       {% if val and o.value in val %}checked{% endif %}>
+                {{ o.label }}
+              </label>
+            {% endfor %}
+
+          {% elif f.kind == 'checkbox' %}
+            <label class="choice">
+              <input type="checkbox" id="f_{{ f.name }}" name="{{ f.name }}" value="1"
+                     {% if val %}checked{% endif %}>
+              {{ f.config.check_label or 'Yes' }}
+            </label>
+
+          {% elif f.kind == 'file' %}
+            <input id="f_{{ f.name }}" name="{{ f.name }}" type="file"
+                   {% if f.config.accept %}accept="{{ f.config.accept|join(',') }}"{% endif %}>
+            {% if f.config.max_size_mb %}<div class="hint">Max {{ f.config.max_size_mb }} MiB</div>{% endif %}
+
+          {% elif f.kind == 'signature' %}
+            {% set mode = f.config.mode or 'drawn' %}
+            <div class="sigwrap" data-name="{{ f.name }}" data-mode="{{ mode }}">
+              {% if mode == 'both' %}
+                <div class="sigtabs">
+                  <button type="button" class="sigtab active" data-tab="draw">Draw</button>
+                  <button type="button" class="sigtab" data-tab="type">Type</button>
+                </div>
+              {% endif %}
+              {% if mode in ('drawn', 'both') %}
+                <div class="sigbox" data-pane="draw">
+                  <canvas></canvas>
+                </div>
+                <button type="button" class="sigclear">Clear</button>
+                <input type="hidden" name="{{ f.name }}__svg" value="">
+              {% endif %}
+              {% if mode in ('typed', 'both') %}
+                <div data-pane="type" {% if mode == 'both' %}style="display:none"{% endif %}>
+                  <input class="sig-typed" name="{{ f.name }}__typed" type="text"
+                         placeholder="Type your full name" value="">
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          {% if err %}<div class="err">{{ err }}</div>{% endif %}
+        {% endif %}
+      </div>
+    {% endfor %}
+
+    <div class="actions">
+      <button class="submit" type="submit">Submit</button>
+    </div>
+  </form>
+
+  <footer>gluck-forms · your response is stored privately</footer>
+</main>
+
+<script>
+// Minimal signature widget. Captures pointer events into an SVG path;
+// on submit, serializes to a hidden input. No external libraries.
+document.querySelectorAll('.sigwrap').forEach(wrap => {
+  const mode = wrap.dataset.mode;
+  const canvas = wrap.querySelector('canvas');
+  const svgInput = wrap.querySelector('input[name$="__svg"]');
+  const clearBtn = wrap.querySelector('.sigclear');
+  const drawPane = wrap.querySelector('[data-pane="draw"]');
+  const typePane = wrap.querySelector('[data-pane="type"]');
+  const tabs = wrap.querySelectorAll('.sigtab');
+
+  // Tab switching for "both" mode.
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.toggle('active', x === t));
+    if (drawPane) drawPane.style.display = t.dataset.tab === 'draw' ? '' : 'none';
+    if (typePane) typePane.style.display = t.dataset.tab === 'type' ? '' : 'none';
+    const clr = wrap.querySelector('.sigclear');
+    if (clr) clr.style.display = t.dataset.tab === 'draw' ? '' : 'none';
+  }));
+
+  if (!canvas) return;
+  const paths = [];       // [[x,y],[x,y]...] per stroke
+  let cur = null;
+  let drawing = false;
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * devicePixelRatio;
+    canvas.height = rect.height * devicePixelRatio;
+    redraw();
+  }
+  function redraw() {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.lineWidth = 2 * devicePixelRatio;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = getComputedStyle(canvas).color || '#111';
+    for (const p of paths) {
+      if (p.length < 2) continue;
+      ctx.beginPath();
+      ctx.moveTo(p[0][0] * devicePixelRatio, p[0][1] * devicePixelRatio);
+      for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0] * devicePixelRatio, p[i][1] * devicePixelRatio);
+      ctx.stroke();
+    }
+  }
+  function pt(ev) {
+    const r = canvas.getBoundingClientRect();
+    return [ev.clientX - r.left, ev.clientY - r.top];
+  }
+  canvas.addEventListener('pointerdown', ev => {
+    ev.preventDefault(); canvas.setPointerCapture(ev.pointerId);
+    drawing = true; cur = [pt(ev)]; paths.push(cur); redraw();
+  });
+  canvas.addEventListener('pointermove', ev => {
+    if (!drawing) return;
+    cur.push(pt(ev)); redraw();
+  });
+  canvas.addEventListener('pointerup', () => { drawing = false; serialize(); });
+  canvas.addEventListener('pointercancel', () => { drawing = false; serialize(); });
+
+  clearBtn && clearBtn.addEventListener('click', () => {
+    paths.length = 0; redraw(); serialize();
+  });
+
+  function serialize() {
+    if (!paths.length) { svgInput.value = ''; return; }
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.round(rect.width), h = Math.round(rect.height);
+    let d = '';
+    for (const p of paths) {
+      if (!p.length) continue;
+      d += 'M' + p.map(pt => pt[0].toFixed(1) + ',' + pt[1].toFixed(1)).join(' L');
+      d += ' ';
+    }
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><path d="${d.trim()}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    svgInput.value = svg;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+});
+</script>
+</body>
+</html>
