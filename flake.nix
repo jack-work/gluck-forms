@@ -17,6 +17,17 @@
         flask waitress requests duckdb pyjwt cryptography python-dateutil pytz markdown
       ]);
 
+      # Package the whole forms/ subtree — the .py plus templates/ — into
+      # a single store path so Flask's template_folder can find them at
+      # runtime. Passing just the .py as entrypoint would strand the
+      # templates outside the store.
+      formsSrc = pkgs: pkgs.runCommandLocal "gluck-forms-src" { } ''
+        mkdir -p $out
+        cp ${./forms/gluck_forms.py} $out/gluck_forms.py
+        mkdir -p $out/templates
+        cp ${./forms/templates}/*.html $out/templates/
+      '';
+
       nixosModule =
         { config, lib, pkgs, ... }:
         let
@@ -42,7 +53,7 @@
               name = "gluck-forms";
               subdomain = "forms";
               port = cfg.port;
-              entrypoint = ./forms/gluck_forms.py;
+              entrypoint = "${formsSrc pkgs}/gluck_forms.py";
               pythonPackages = ps: with ps; [
                 flask
                 waitress
@@ -92,6 +103,7 @@
 
       packages = forAllSystems (pkgs: {
         default = pyEnv pkgs;
+        src = formsSrc pkgs;
       });
     };
 }
