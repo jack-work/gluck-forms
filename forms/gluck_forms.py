@@ -1229,6 +1229,50 @@ def material_inline(mid):
 
 
 # ═════════════════════════════════════════════════════════════════════════
+#  Admin dashboard  (Host: forms.kelliher.info) — HTML pages
+# ═════════════════════════════════════════════════════════════════════════
+def _fmt_ts(ts) -> str | None:
+    """Format a datetime for display in the admin UI (UTC, minute precision)."""
+    if ts is None:
+        return None
+    if isinstance(ts, str):
+        return ts
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return ts.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
+app.jinja_env.globals["fmt_ts"] = _fmt_ts
+
+
+@app.get("/admin")
+def admin_index():
+    denied = require_admin()
+    if denied:
+        return denied
+    with db_lock:
+        rows = db.execute(
+            """SELECT id, slug, title, description, version, frozen,
+                      created_by, created_at, updated_at
+               FROM form ORDER BY updated_at DESC"""
+        ).fetchall()
+        counts = dict(
+            db.execute(
+                "SELECT form_id, COUNT(*) FROM form_response GROUP BY form_id"
+            ).fetchall()
+        )
+    forms = []
+    for r in rows:
+        d = _form_dict(r, include_fields=False)
+        d["response_count"] = int(counts.get(r[0], 0))
+        d["updated_at_display"] = _fmt_ts(r[8])
+        forms.append(d)
+    return render_template(
+        "admin_index.html", forms=forms, caller_user=caller()
+    )
+
+
+# ═════════════════════════════════════════════════════════════════════════
 #  Public form filler  (Host: f.kelliher.info)
 # ═════════════════════════════════════════════════════════════════════════
 def _load_by_token(raw_token: str):

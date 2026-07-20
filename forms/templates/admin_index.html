@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin · gluck-forms</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --fg: #111;
+    --muted: #999;
+    --line: #e5e5e2;
+    --accent: #b45309;
+    --danger: #dc2626;
+    --card: #fff;
+    --input-bg: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c0a09;
+      --fg: #f5f5f4;
+      --muted: #78716c;
+      --line: #292524;
+      --accent: #fbbf24;
+      --danger: #f87171;
+      --card: #1c1917;
+      --input-bg: #0c0a09;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+  header { margin-bottom: 2rem; display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  h1 { font-size: 1.75rem; font-weight: 500; letter-spacing: -0.02em; margin: 0; }
+  .who { color: var(--muted); font-size: 0.8rem; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 500; }
+  tr:hover td { background: var(--card); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .title-cell a { font-weight: 500; color: var(--fg); }
+  .slug { color: var(--muted); font-size: 0.75rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 0.15rem; }
+  .badge {
+    display: inline-block; padding: 0.05rem 0.4rem; font-size: 0.7rem;
+    border-radius: 3px; border: 1px solid var(--line); color: var(--muted);
+  }
+  .badge.frozen { color: var(--accent); border-color: var(--accent); }
+  .num { text-align: right; }
+  .empty { padding: 2rem 0; color: var(--muted); text-align: center; }
+  footer { text-align: center; color: var(--muted); font-size: 0.72rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>gluck-forms · admin</h1>
+    {% if caller_user %}<div class="who">{{ caller_user }}</div>{% endif %}
+  </header>
+
+  {% if not forms %}
+    <div class="empty">No forms yet.</div>
+  {% else %}
+    <table>
+      <thead>
+        <tr>
+          <th>Form</th>
+          <th>Version</th>
+          <th>State</th>
+          <th class="num">Responses</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in forms %}
+        <tr>
+          <td class="title-cell">
+            <div><a href="/admin/{{ f.slug }}">{{ f.title }}</a></div>
+            <div class="slug">{{ f.slug }}</div>
+          </td>
+          <td>v{{ f.version }}</td>
+          <td>
+            {% if f.frozen %}
+              <span class="badge frozen">frozen</span>
+            {% else %}
+              <span class="badge">draft</span>
+            {% endif %}
+          </td>
+          <td class="num">{{ f.response_count }}</td>
+          <td>{{ f.updated_at_display or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  <footer>gluck-forms · admin</footer>
+</main>
+</body>
+</html>
