@@ -1056,6 +1056,163 @@ def blob_preview(bid):
     return _serve_blob(bid, "inline")
 
 
+# ── Materials (admin) ─────────────────────────────────────────────────────
+def _material_row(mid: int):
+    return db.execute(
+        """SELECT id, form_id, filename, label, mime, size, sha256,
+                  storage_path, ord, created_at
+           FROM form_material WHERE id = ?""",
+        [mid],
+    ).fetchone()
+
+
+def _material_dict(row, include_path: bool = False) -> dict:
+    out = {
+        "id": row[0],
+        "form_id": row[1],
+        "filename": row[2],
+        "label": row[3] or row[2],
+        "mime": row[4],
+        "size": row[5],
+        "sha256": row[6],
+        "ord": row[8],
+        "created_at": row[9].isoformat() if row[9] else None,
+    }
+    if include_path:
+        out["storage_path"] = row[7]
+    return out
+
+
+def _sniff_mime(data: bytes, fallback: str) -> str:
+    try:
+        import magic  # python-magic
+
+        sniffed = magic.from_buffer(data, mime=True)
+        if sniffed:
+            return sniffed
+    except Exception:  # noqa: BLE001
+        pass
+    return fallback or "application/octet-stream"
+
+
+@app.post("/forms/<slug>/materials")
+def upload_material(slug):
+    denied = require_admin()
+    if denied:
+        return denied
+    fs = request.files.get("file")
+    if not fs or not fs.filename:
+        return jsonify(error="file required (multipart field 'file')"), 400
+    data = fs.read()
+    if len(data) > MAX_MATERIAL_MB * 1024 * 1024:
+        return jsonify(error=f"exceeds max size {MAX_MATERIAL_MB} MiB"), 413
+    filename = (fs.filename or "upload")[:200]
+    label = (request.form.get("label") or "").strip() or None
+    upload_mime = fs.mimetype or "application/octet-stream"
+    mime = _sniff_mime(data, upload_mime)
+
+    with db_lock:
+        row = form_by_slug(slug)
+        if not row:
+            return jsonify(error="not found"), 404
+        form_id = row[0]
+
+        sha, path = store_material_bytes(data)
+
+        # Dedup: same form + same sha → return existing row (200).
+        existing = db.execute(
+            """SELECT id, form_id, filename, label, mime, size, sha256,
+                      storage_path, ord, created_at
+               FROM form_material WHERE form_id = ? AND sha256 = ?""",
+            [form_id, sha],
+        ).fetchone()
+        if existing:
+            return jsonify(_material_dict(existing)), 200
+
+        mid = next_id("form_material")
+        next_ord = db.execute(
+            "SELECT COALESCE(MAX(ord), -1) + 1 FROM form_material WHERE form_id = ?",
+            [form_id],
+        ).fetchone()[0]
+        db.execute(
+            """INSERT INTO form_material
+               (id, form_id, filename, label, mime, size, sha256, storage_path, ord)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [mid, form_id, filename, label, mime, len(data), sha, path, int(next_ord)],
+        )
+        return jsonify(_material_dict(_material_row(mid))), 201
+
+
+@app.get("/forms/<slug>/materials")
+def list_materials(slug):
+    denied = require_admin()
+    if denied:
+        return denied
+    with db_lock:
+        row = form_by_slug(slug)
+        if not row:
+            return jsonify(error="not found"), 404
+        rows = db.execute(
+            """SELECT id, form_id, filename, label, mime, size, sha256,
+                      storage_path, ord, created_at
+               FROM form_material WHERE form_id = ? ORDER BY ord""",
+            [row[0]],
+        ).fetchall()
+    return jsonify([_material_dict(r) for r in rows])
+
+
+@app.delete("/forms/<slug>/materials/<int:mid>")
+def delete_material(slug, mid):
+    denied = require_admin()
+    if denied:
+        return denied
+    with db_lock:
+        form = form_by_slug(slug)
+        if not form:
+            return jsonify(error="not found"), 404
+        row = db.execute(
+            "SELECT id, form_id FROM form_material WHERE id = ?", [mid]
+        ).fetchone()
+        if not row or row[1] != form[0]:
+            return jsonify(error="not found"), 404
+        db.execute("DELETE FROM form_material WHERE id = ?", [mid])
+        # Note: we don't unlink the on-disk blob — it's content-addressed
+        # and may be referenced by future re-uploads. Sweep offline if needed.
+        return ("", 204)
+
+
+def _serve_material(mid: int, disposition: str):
+    with db_lock:
+        row = _material_row(mid)
+    if not row:
+        return jsonify(error="not found"), 404
+    path = Path(row[7])
+    if not path.exists():
+        return jsonify(error="material missing on disk"), 410
+    return send_file(
+        path,
+        mimetype=row[4],
+        as_attachment=(disposition == "attachment"),
+        download_name=row[2] or f"material-{mid}",
+    )
+
+
+@app.get("/materials/<int:mid>")
+def material_download(mid):
+    denied = require_admin()
+    if denied:
+        return denied
+    return _serve_material(mid, "attachment")
+
+
+@app.get("/materials/<int:mid>/inline")
+def material_inline(mid):
+    denied = require_admin()
+    if denied:
+        return denied
+    return _serve_material(mid, "inline")
+
+
 # ═════════════════════════════════════════════════════════════════════════
 #  Public form filler  (Host: f.kelliher.info)
 # ═════════════════════════════════════════════════════════════════════════
