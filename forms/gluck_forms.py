@@ -1272,6 +1272,119 @@ def admin_index():
     )
 
 
+def _token_status(row) -> str:
+    # row: (id, hint, form_version_at_mint, max_uses, uses, created_by,
+    #       created_at, expires_at, revoked_at)
+    if row[8] is not None:
+        return "revoked"
+    exp = row[7]
+    if exp is not None:
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        if exp < now_utc():
+            return "expired"
+    if row[3] is not None and row[4] >= row[3]:
+        return "used_up"
+    return "active"
+
+
+@app.get("/admin/<slug>")
+def admin_form_page(slug):
+    denied = require_admin()
+    if denied:
+        return denied
+    with db_lock:
+        row = form_by_slug(slug)
+        if not row:
+            return _public_error("Form not found.", 404)
+        form_dict = _form_dict(row, include_fields=False)
+        form_dict["updated_at_display"] = _fmt_ts(row[8])
+
+        tok_rows = db.execute(
+            """SELECT id, hint, form_version_at_mint, max_uses, uses,
+                      created_by, created_at, expires_at, revoked_at
+               FROM form_token WHERE form_id = ? ORDER BY created_at DESC""",
+            [row[0]],
+        ).fetchall()
+        resp_rows = db.execute(
+            """SELECT id, form_version, token_id, answers, submitted_at
+               FROM form_response WHERE form_id = ?
+               ORDER BY submitted_at DESC""",
+            [row[0]],
+        ).fetchall()
+        materials = _materials_for(row[0])
+
+    tokens = []
+    any_active = False
+    for t in tok_rows:
+        status = _token_status(t)
+        if status == "active":
+            any_active = True
+        tokens.append(
+            {
+                "id": t[0],
+                "hint": t[1],
+                "form_version_at_mint": t[2],
+                "max_uses": t[3],
+                "uses": t[4],
+                "created_by": t[5],
+                "created_at_display": _fmt_ts(t[6]),
+                "expires_at_display": _fmt_ts(t[7]),
+                "status": status,
+            }
+        )
+
+    responses = []
+    for r in resp_rows:
+        answers = json.loads(r[3]) if isinstance(r[3], str) else (r[3] or {})
+        blob_count = sum(
+            1
+            for v in answers.values()
+            if isinstance(v, dict) and "blob_id" in v
+        )
+        field_count = len(answers) - blob_count
+        name = (
+            answers.get("legal_name")
+            or answers.get("name")
+            or answers.get("full_name")
+            or "—"
+        )
+        if isinstance(name, dict):
+            name = "—"
+        email = answers.get("email") or "—"
+        if isinstance(email, dict):
+            email = "—"
+        responses.append(
+            {
+                "id": r[0],
+                "submitted_at_display": _fmt_ts(r[4]),
+                "display_name": str(name),
+                "display_email": str(email),
+                "field_count": field_count,
+                "blob_count": blob_count,
+            }
+        )
+
+    # Public URL is only useful if there's a live token; we can't
+    # reconstruct the raw token, so link to the public host root only when
+    # at least one token is active so the operator knows a live link exists.
+    public_url = None
+    if any_active:
+        # No specific URL — raw tokens aren't retrievable. Leave a link to
+        # the public host as an affordance for testing.
+        public_url = f"https://{PUBLIC_HOST}/"
+
+    return render_template(
+        "admin_form.html",
+        form=form_dict,
+        tokens=tokens,
+        materials=materials,
+        responses=responses,
+        response_count=len(responses),
+        public_url=public_url,
+    )
+
+
 # ═════════════════════════════════════════════════════════════════════════
 #  Public form filler  (Host: f.kelliher.info)
 # ═════════════════════════════════════════════════════════════════════════

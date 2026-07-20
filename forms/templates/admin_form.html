@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ form.title }} · admin</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --fg: #111;
+    --muted: #999;
+    --line: #e5e5e2;
+    --accent: #b45309;
+    --danger: #dc2626;
+    --card: #fff;
+    --input-bg: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c0a09;
+      --fg: #f5f5f4;
+      --muted: #78716c;
+      --line: #292524;
+      --accent: #fbbf24;
+      --danger: #f87171;
+      --card: #1c1917;
+      --input-bg: #0c0a09;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  main { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .crumb { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
+  header.page {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 1.5rem; margin-bottom: 2rem;
+    padding-bottom: 1rem; border-bottom: 1px solid var(--line);
+  }
+  h1 { font-size: 1.6rem; font-weight: 500; letter-spacing: -0.02em; margin: 0 0 0.4rem; }
+  .meta { color: var(--muted); font-size: 0.8rem; line-height: 1.7; }
+  .meta .sep { margin: 0 0.4rem; opacity: 0.5; }
+  .badge {
+    display: inline-block; padding: 0.05rem 0.4rem; font-size: 0.7rem;
+    border-radius: 3px; border: 1px solid var(--line); color: var(--muted);
+    vertical-align: middle;
+  }
+  .badge.frozen { color: var(--accent); border-color: var(--accent); }
+  .badge.ok { color: #16a34a; border-color: #16a34a; }
+  .badge.warn { color: var(--danger); border-color: var(--danger); }
+  .badge.muted { color: var(--muted); border-color: var(--line); }
+  section { margin: 2.5rem 0; }
+  section > h2 {
+    font-size: 0.85rem; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted); margin: 0 0 0.75rem;
+    display: flex; align-items: baseline; gap: 0.75rem;
+  }
+  section > h2 .count { font-size: 0.7rem; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 0.55rem 0.7rem; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 500; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover td { background: var(--card); }
+  tr.clickable td a { color: var(--fg); }
+  .num { text-align: right; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; }
+  .empty { padding: 1.5rem 0; color: var(--muted); text-align: center; font-size: 0.9rem; }
+  button, .btn {
+    padding: 0.35rem 0.75rem; font: inherit; font-size: 0.8rem;
+    background: transparent; color: var(--fg);
+    border: 1px solid var(--line); border-radius: 4px; cursor: pointer;
+  }
+  button:hover, .btn:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+  button.primary:hover { opacity: 0.9; color: #fff; }
+  button.danger {
+    color: var(--danger); border-color: transparent;
+    padding: 0.2rem 0.4rem;
+  }
+  button.danger:hover { border-color: var(--danger); }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+  /* mint form */
+  .mint-panel {
+    display: none; margin: 0.75rem 0; padding: 0.9rem 1rem;
+    border: 1px solid var(--line); border-radius: 4px; background: var(--card);
+  }
+  .mint-panel.open { display: block; }
+  .mint-panel .row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end; }
+  .mint-panel label { display: flex; flex-direction: column; font-size: 0.75rem; color: var(--muted); gap: 0.25rem; }
+  .mint-panel input {
+    padding: 0.4rem 0.55rem; font: inherit; font-size: 0.85rem;
+    background: var(--input-bg); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 4px;
+  }
+  .mint-panel input:focus { outline: none; border-color: var(--accent); }
+  .mint-reveal {
+    display: none; margin-top: 0.75rem; padding: 0.75rem 0.9rem;
+    border: 1px solid var(--accent); border-radius: 4px;
+    background: var(--card);
+  }
+  .mint-reveal.open { display: block; }
+  .mint-reveal .warn { color: var(--accent); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
+  .mint-reveal .url {
+    display: flex; gap: 0.5rem; align-items: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8rem; word-break: break-all;
+  }
+  .mint-reveal .url code {
+    flex: 1; padding: 0.4rem 0.55rem; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 4px;
+  }
+  /* materials strip */
+  .material-grid {
+    display: grid; gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+  .material-tile {
+    position: relative;
+    display: flex; flex-direction: column;
+    border: 1px solid var(--line); border-radius: 4px;
+    background: var(--card); color: var(--fg);
+    overflow: hidden;
+    transition: border-color 120ms ease;
+  }
+  .material-tile:hover { border-color: var(--accent); }
+  .material-tile > a.dl { color: var(--fg); text-decoration: none; display: flex; flex-direction: column; flex: 1; }
+  .material-tile .thumb {
+    aspect-ratio: 4 / 3;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    overflow: hidden;
+  }
+  .material-tile .thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .mime-icon { width: 40px; height: 40px; color: var(--muted); }
+  .material-meta { padding: 0.45rem 0.6rem 0.55rem; }
+  .material-name { font-size: 0.8rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .material-sub { color: var(--muted); font-size: 0.7rem; margin-top: 0.1rem; }
+  .material-del {
+    position: absolute; top: 4px; right: 4px;
+    width: 22px; height: 22px; padding: 0; line-height: 1;
+    border-radius: 50%;
+    background: var(--card); border: 1px solid var(--line);
+    color: var(--muted); font-size: 0.85rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .material-del:hover { border-color: var(--danger); color: var(--danger); }
+  footer { text-align: center; color: var(--muted); font-size: 0.72rem; margin-top: 3rem; }
+  .toast {
+    position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
+    background: var(--card); color: var(--fg);
+    border: 1px solid var(--accent); border-radius: 4px;
+    padding: 0.5rem 0.9rem; font-size: 0.85rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    opacity: 0; pointer-events: none; transition: opacity 120ms ease;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<main data-slug="{{ form.slug }}">
+  <div class="crumb"><a href="/admin">← all forms</a></div>
+  <header class="page">
+    <div>
+      <h1>{{ form.title }}</h1>
+      <div class="meta">
+        <span class="mono">{{ form.slug }}</span>
+        <span class="sep">·</span>
+        v{{ form.version }}
+        <span class="sep">·</span>
+        {% if form.frozen %}
+          <span class="badge frozen">frozen</span>
+        {% else %}
+          <span class="badge">draft</span>
+        {% endif %}
+        <span class="sep">·</span>
+        {{ response_count }} response{{ '' if response_count == 1 else 's' }}
+        <br>
+        by {{ form.created_by }} · updated {{ form.updated_at_display or '—' }}
+        {% if public_url %}
+          <span class="sep">·</span>
+          <a href="{{ public_url }}" target="_blank" rel="noopener">public link ↗</a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <section class="tokens">
+    <div class="toolbar">
+      <h2 style="margin:0">Tokens <span class="count">({{ tokens|length }})</span></h2>
+      <button type="button" id="mint-toggle">+ Mint token</button>
+    </div>
+
+    <div class="mint-panel" id="mint-panel">
+      <div class="row">
+        <label>
+          Hint
+          <input id="mint-hint" type="text" placeholder="e.g. jane@example.com" size="28">
+        </label>
+        <label>
+          Expires in (days)
+          <input id="mint-days" type="number" min="1" max="1825" value="30" size="6">
+        </label>
+        <label>
+          Max uses
+          <input id="mint-uses" type="number" min="1" placeholder="unlimited" size="6">
+        </label>
+        <button type="button" class="primary" id="mint-submit">Mint</button>
+        <button type="button" id="mint-cancel">Cancel</button>
+      </div>
+      <div class="mint-reveal" id="mint-reveal">
+        <div class="warn">Copy now — this URL will never be shown again</div>
+        <div class="url">
+          <code id="mint-url"></code>
+          <button type="button" id="mint-copy">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    {% if tokens %}
+    <table>
+      <thead>
+        <tr>
+          <th>Hint</th>
+          <th>Uses / Max</th>
+          <th>Expires</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tokens %}
+        <tr data-tid="{{ t.id }}">
+          <td>{{ t.hint or '—' }}</td>
+          <td>{{ t.uses }} / {{ t.max_uses if t.max_uses is not none else '∞' }}</td>
+          <td>{{ t.expires_at_display or '—' }}</td>
+          <td>
+            {% if t.status == 'active' %}
+              <span class="badge ok">active</span>
+            {% elif t.status == 'revoked' %}
+              <span class="badge warn">revoked</span>
+            {% elif t.status == 'expired' %}
+              <span class="badge muted">expired</span>
+            {% elif t.status == 'used_up' %}
+              <span class="badge muted">used up</span>
+            {% endif %}
+          </td>
+          <td>{{ t.created_at_display or '—' }}</td>
+          <td style="text-align:right">
+            {% if t.status == 'active' %}
+              <button type="button" class="danger token-revoke" data-tid="{{ t.id }}">Revoke</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty">No tokens yet. Mint one to share the form.</div>
+    {% endif %}
+  </section>
+
+  <section class="materials">
+    <h2>Materials <span class="count">({{ materials|length }})</span></h2>
+    {% if materials %}
+    <div class="material-grid">
+      {% for m in materials %}
+        <div class="material-tile" data-mid="{{ m.id }}">
+          <button type="button" class="material-del" data-mid="{{ m.id }}" title="Delete">×</button>
+          <a class="dl" href="/materials/{{ m.id }}" download>
+            <div class="thumb">
+              {% if m.mime.startswith('image/') %}
+                <img src="/materials/{{ m.id }}/inline" alt="">
+              {% elif m.mime == 'application/pdf' %}
+                <svg class="mime-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                  <path d="M14 3v6h6"/>
+                  <text x="7.5" y="17" font-size="5" font-family="ui-sans-serif, system-ui" fill="currentColor" stroke="none">PDF</text>
+                </svg>
+              {% elif m.mime.startswith('text/') %}
+                <svg class="mime-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                  <path d="M14 3v6h6"/>
+                  <path d="M8 13h8M8 16h8M8 10h4"/>
+                </svg>
+              {% else %}
+                <svg class="mime-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                  <path d="M14 3v6h6"/>
+                </svg>
+              {% endif %}
+            </div>
+            <div class="material-meta">
+              <div class="material-name">{{ m.label or m.filename }}</div>
+              <div class="material-sub">{{ human_size(m.size) }}</div>
+            </div>
+          </a>
+        </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <div class="empty">No materials attached.</div>
+    {% endif %}
+  </section>
+
+  <section class="responses">
+    <h2>Responses <span class="count">({{ responses|length }})</span></h2>
+    {% if responses %}
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Submitted</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th class="num">Fields</th>
+          <th class="num">Blobs</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in responses %}
+        <tr class="clickable" onclick="window.location='/admin/{{ form.slug }}/responses/{{ r.id }}'">
+          <td class="mono">#{{ r.id }}</td>
+          <td>{{ r.submitted_at_display or '—' }}</td>
+          <td>{{ r.display_name }}</td>
+          <td>{{ r.display_email }}</td>
+          <td class="num">{{ r.field_count }}</td>
+          <td class="num">{{ r.blob_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty">No responses yet.</div>
+    {% endif %}
+  </section>
+
+  <footer>gluck-forms · admin · {{ form.slug }}</footer>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- JS glue for mint / revoke / material delete lives in a follow-up commit -->
+</body>
+</html>
