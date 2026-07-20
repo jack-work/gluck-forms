@@ -1,0 +1,48 @@
+{
+  "nodes": {
+    "gluck-service-lib": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1784509875,
+        "narHash": "sha256-rPpb4ZjZbBGQQM6pn9HbVMWSRlXbSwp6O+ZumFQzYOs=",
+        "owner": "jack-work",
+        "repo": "gluck-service-lib",
+        "rev": "a3cc964a1aa7a7c2c6e5f1533dcf87217437c533",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jack-work",
+        "repo": "gluck-service-lib",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1784356753,
+        "narHash": "sha256-12KrbMiWLcf8m7pCvAtZh1ZrgF85ZXDXvfR/fWTKy84=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "61b7c44c4073f0b827768aff0049561b5110ea5a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "gluck-service-lib": "gluck-service-lib",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
