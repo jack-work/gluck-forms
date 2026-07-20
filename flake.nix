@@ -14,7 +14,7 @@
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
 
       pyEnv = pkgs: pkgs.python3.withPackages (ps: with ps; [
-        flask waitress requests duckdb pyjwt cryptography python-dateutil pytz markdown
+        flask waitress requests duckdb pyjwt cryptography python-dateutil pytz markdown python-magic
       ]);
 
       # Package the whole forms/ subtree — the .py plus templates/ — into
@@ -64,17 +64,64 @@
                 python-dateutil
                 pytz
                 markdown
+                python-magic
               ];
               stateDirectory = "gluck-forms";
               environment = {
                 GLUCK_FORMS_DB = "/var/lib/gluck-forms/forms.duckdb";
-                GLUCK_FORMS_BLOBS = "/var/lib/gluck-forms/blobs";
+                GLUCK_FORMS_MATERIALS_DIR = "/var/lib/gluck-forms-blobs/materials";
+                GLUCK_FORMS_RESPONSES_DIR = "/var/lib/gluck-forms-blobs/responses";
+              };
+              # Two ZFS-backed volumes provided by the platform storage
+              # contract; wait for both to mount before start.
+              after = [
+                "kelliher-web-volume-gluck-forms-data.service"
+                "kelliher-web-volume-gluck-forms-blobs.service"
+                "network.target"
+              ];
+              # Retire DynamicUser: the platform's storage ensurer chowns
+              # the mount points to a named user, and DynamicUser's UID
+              # shifts break that. Static system user instead.
+              extraServiceConfig = {
+                DynamicUser = false;
+                User = "gluck-forms";
+                Group = "gluck-forms";
+                StateDirectory = [ ];
+                RequiresMountsFor = [
+                  "/var/lib/gluck-forms"
+                  "/var/lib/gluck-forms-blobs"
+                ];
               };
               requireAuth = true;
               requiredGroups = [ "gluck-forms-admin" ];
             })
 
             {
+              # Static system user matching the platform's chown target.
+              users.users.gluck-forms = {
+                isSystemUser = true;
+                group = "gluck-forms";
+              };
+              users.groups.gluck-forms = { };
+
+              # Platform storage: one dataset for the DB (small, tuned for
+              # duckdb pages, critical snapshots), one for blobs (larger,
+              # 128K records, standard app snapshots).
+              services.kelliher-web.storage.volumes.gluck-forms-data = {
+                mountPoint = "/var/lib/gluck-forms";
+                owner = "gluck-forms";
+                quota = "5G";
+                recordsize = "16K";
+                snapshotProfile = "critical";
+              };
+              services.kelliher-web.storage.volumes.gluck-forms-blobs = {
+                mountPoint = "/var/lib/gluck-forms-blobs";
+                owner = "gluck-forms";
+                quota = "50G";
+                recordsize = "128K";
+                snapshotProfile = "app";
+              };
+
               # Public form-filler site: no Authelia, no group. The URL
               # token IS the capability; the app validates it.
               services.kelliher-web.sites.gluck-forms-public = {
@@ -95,7 +142,8 @@
           packages = [ (pyEnv pkgs) ];
           shellHook = ''
             export GLUCK_FORMS_DB=$PWD/.local.duckdb
-            export GLUCK_FORMS_BLOBS=$PWD/.local-blobs
+            export GLUCK_FORMS_MATERIALS_DIR=$PWD/.local-blobs/materials
+            export GLUCK_FORMS_RESPONSES_DIR=$PWD/.local-blobs/responses
             export PORT=9095
           '';
         };
