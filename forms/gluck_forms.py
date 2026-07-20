@@ -264,8 +264,32 @@ db.execute(
         mime TEXT NOT NULL,
         size BIGINT NOT NULL,
         sha256 TEXT NOT NULL,
+        -- Per-response path: <RESPONSES_DIR>/<response_id>/<field-name>.<ext>.
+        -- sha256 is kept for integrity but no longer drives layout.
         storage_path TEXT NOT NULL
     )"""
+)
+db.execute(
+    """CREATE TABLE IF NOT EXISTS form_material (
+        id BIGINT PRIMARY KEY,
+        form_id BIGINT NOT NULL,
+        filename TEXT NOT NULL,
+        label TEXT,
+        mime TEXT NOT NULL,
+        size BIGINT NOT NULL,
+        sha256 TEXT NOT NULL,
+        -- Content-addressed path: <MATERIALS_DIR>/<sha[:2]>/<sha>
+        storage_path TEXT NOT NULL,
+        ord INT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (form_id, sha256)
+    )"""
+)
+db.execute(
+    "CREATE INDEX IF NOT EXISTS form_material_sha_idx ON form_material (sha256)"
+)
+db.execute(
+    "CREATE INDEX IF NOT EXISTS form_material_form_idx ON form_material (form_id, ord)"
 )
 
 
