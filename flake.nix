@@ -91,6 +91,14 @@
                   "/var/lib/gluck-forms"
                   "/var/lib/gluck-forms-blobs"
                 ];
+                # ProtectSystem=strict (inherited from gluck-service-lib)
+                # makes /var and everything under it read-only for the
+                # process unless we explicitly grant write access to the
+                # volumes we own.
+                ReadWritePaths = [
+                  "/var/lib/gluck-forms"
+                  "/var/lib/gluck-forms-blobs"
+                ];
               };
               requireAuth = true;
               requiredGroups = [ "gluck-forms-admin" ];
