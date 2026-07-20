@@ -72,6 +72,43 @@
   .sigclear { background: transparent; border: 0; color: var(--muted); font-size: 0.75rem; cursor: pointer; align-self: flex-start; padding: 0.2rem 0; }
   .sigclear:hover { color: var(--fg); }
   .sig-typed { font-family: "Snell Roundhand", "Apple Chancery", cursive; font-size: 1.5rem; padding: 0.75rem; }
+  /* Materials gallery */
+  .materials { margin: 2rem 0 2.5rem; }
+  .materials h2 { font-size: 1rem; font-weight: 500; letter-spacing: -0.01em; margin: 0 0 0.75rem; color: var(--fg); }
+  .material-grid {
+    display: grid; gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+  .material-tile {
+    display: flex; flex-direction: column;
+    border: 1px solid var(--line); border-radius: 4px;
+    background: var(--card); color: var(--fg);
+    text-decoration: none;
+    overflow: hidden;
+    transition: border-color 120ms ease, transform 120ms ease;
+  }
+  .material-tile:hover { border-color: var(--accent); }
+  .material-tile .thumb {
+    aspect-ratio: 4 / 3;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+    color: var(--muted);
+  }
+  .material-tile .thumb img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+  }
+  .mime-icon { width: 48px; height: 48px; color: var(--muted); }
+  .material-tile:hover .mime-icon { color: var(--accent); }
+  .material-meta { padding: 0.5rem 0.65rem 0.6rem; }
+  .material-name {
+    font-size: 0.85rem; font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .material-sub { color: var(--muted); font-size: 0.72rem; margin-top: 0.15rem; }
 </style>
 </head>
 <body>
@@ -80,6 +117,54 @@
     <h1>{{ form_title }}</h1>
     {% if form_description_html %}<div class="desc">{{ form_description_html|safe }}</div>{% endif %}
   </header>
+
+  {% if materials %}
+  <section class="materials">
+    <h2>Documents</h2>
+    <div class="material-grid">
+      {% for m in materials %}
+        <a class="material-tile" href="/{{ token }}/materials/{{ m.id }}" download>
+          <div class="thumb">
+            {% if m.mime.startswith('image/') %}
+              <img src="/{{ token }}/materials/{{ m.id }}/inline" alt="">
+            {% elif m.mime == 'application/pdf' %}
+              {# pdf icon #}
+              <svg class="mime-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                <path d="M14 3v6h6"/>
+                <text x="7.5" y="17" font-size="5" font-family="ui-sans-serif, system-ui" fill="currentColor" stroke="none">PDF</text>
+              </svg>
+            {% elif m.mime in ('application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') %}
+              {# doc icon #}
+              <svg class="mime-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                <path d="M14 3v6h6"/>
+                <text x="7.5" y="17" font-size="5" font-family="ui-sans-serif, system-ui" fill="currentColor" stroke="none">DOC</text>
+              </svg>
+            {% elif m.mime.startswith('text/') %}
+              {# text icon #}
+              <svg class="mime-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                <path d="M14 3v6h6"/>
+                <path d="M8 13h8M8 16h8M8 10h4"/>
+              </svg>
+            {% else %}
+              {# generic file icon #}
+              <svg class="mime-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                <path d="M14 3v6h6"/>
+              </svg>
+            {% endif %}
+          </div>
+          <div class="material-meta">
+            <div class="material-name">{{ m.label or m.filename }}</div>
+            <div class="material-sub">{{ m.mime }} · {{ human_size(m.size) }}</div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
 
   <form method="POST" action="/{{ token }}" enctype="multipart/form-data" novalidate>
     {% for f in fields %}

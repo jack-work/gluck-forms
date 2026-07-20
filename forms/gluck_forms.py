@@ -100,6 +100,21 @@ app.config["MAX_CONTENT_LENGTH"] = 128 * 1024 * 1024  # 128 MiB hard cap
 MATERIALS_DIR.mkdir(parents=True, exist_ok=True)
 RESPONSES_DIR.mkdir(parents=True, exist_ok=True)
 
+
+def human_size(n) -> str:
+    try:
+        n = int(n)
+    except (TypeError, ValueError):
+        return "?"
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if n < 1024 or unit == "TB":
+            return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+        n /= 1024
+    return f"{n:.1f} TB"
+
+
+app.jinja_env.globals["human_size"] = human_size
+
 db_lock = threading.Lock()
 db = duckdb.connect(DB_PATH)
 
