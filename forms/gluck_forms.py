@@ -1255,14 +1255,26 @@ def _load_by_token(raw_token: str):
     return row, form
 
 
+def _materials_for(form_id: int) -> list[dict]:
+    rows = db.execute(
+        """SELECT id, form_id, filename, label, mime, size, sha256,
+                  storage_path, ord, created_at
+           FROM form_material WHERE form_id = ? ORDER BY ord""",
+        [form_id],
+    ).fetchall()
+    return [_material_dict(r) for r in rows]
+
+
 def _render_form_page(raw_token, form_row, token_row, errors=None, values=None):
     fields = fields_for(form_row[0])
+    materials = _materials_for(form_row[0])
     return render_template(
         "form.html",
         token=raw_token,
         form_title=form_row[2],
         form_description_html=(md.markdown(form_row[3]) if form_row[3] else ""),
         fields=fields,
+        materials=materials,
         errors=errors or {},
         values=values or {},
         kinds=FIELD_KINDS,
@@ -1375,6 +1387,87 @@ def public_receipt(token):
     return render_template(
         "receipt.html", form_title=form_row[2], response_id=None, token=token
     )
+
+
+# ── Public materials (token-gated) ─────────────────────────────────────────
+class _PublicGateFail(Exception):
+    def __init__(self, response):
+        self.response = response
+
+
+def _public_gate(token: str):
+    """Host + token + rate-limit gate. Raises :class:`_PublicGateFail` with
+    the ready-to-return response on rejection; otherwise returns
+    ``form_row``."""
+    if _request_host() != PUBLIC_HOST:
+        raise _PublicGateFail((jsonify(error="not found"), 404))
+    if rate_limited(client_ip()):
+        raise _PublicGateFail(
+            _public_error("Too many attempts from your address. Try again later.", 429)
+        )
+    with db_lock:
+        token_row, form_row = _load_by_token(token)
+    if not token_row:
+        raise _PublicGateFail(
+            _public_error("This form link is invalid, expired, or used up.", 404)
+        )
+    return form_row
+
+
+@app.get("/<token>/materials")
+def public_list_materials(token):
+    try:
+        form_row = _public_gate(token)
+    except _PublicGateFail as f:
+        return f.response
+    with db_lock:
+        rows = db.execute(
+            """SELECT id, filename, label, mime, size
+               FROM form_material WHERE form_id = ? ORDER BY ord""",
+            [form_row[0]],
+        ).fetchall()
+    return jsonify(
+        [
+            {
+                "id": r[0],
+                "filename": r[1],
+                "label": r[2] or r[1],
+                "mime": r[3],
+                "size": r[4],
+            }
+            for r in rows
+        ]
+    )
+
+
+def _serve_public_material(token: str, mid: int, disposition: str):
+    try:
+        form_row = _public_gate(token)
+    except _PublicGateFail as f:
+        return f.response
+    with db_lock:
+        row = _material_row(mid)
+    if not row or row[1] != form_row[0]:
+        return _public_error("Not found.", 404)
+    path = Path(row[7])
+    if not path.exists():
+        return _public_error("Not found.", 410)
+    return send_file(
+        path,
+        mimetype=row[4],
+        as_attachment=(disposition == "attachment"),
+        download_name=row[2] or f"material-{mid}",
+    )
+
+
+@app.get("/<token>/materials/<int:mid>")
+def public_material_download(token, mid):
+    return _serve_public_material(token, mid, "attachment")
+
+
+@app.get("/<token>/materials/<int:mid>/inline")
+def public_material_inline(token, mid):
+    return _serve_public_material(token, mid, "inline")
 
 
 def _public_error(msg: str, status: int):
