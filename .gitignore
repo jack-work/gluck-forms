@@ -1,0 +1,22 @@
+# Byte-compiled / cached Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# Local DuckDB / blobs (only if someone runs it out-of-tree)
+*.duckdb
+*.duckdb.wal
+blobs/
+
+# Nix
+result
+result-*
+.direnv/
+
+# Editor droppings
+*.swp
+*.swo
+.idea/
+.vscode/
+.DS_Store
