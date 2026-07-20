@@ -49,7 +49,19 @@ from jwt import PyJWKClient
 
 # ── Config ────────────────────────────────────────────────────────────────
 DB_PATH = os.environ.get("GLUCK_FORMS_DB", "/var/lib/gluck-forms/forms.duckdb")
-BLOB_ROOT = Path(os.environ.get("GLUCK_FORMS_BLOBS", "/var/lib/gluck-forms/blobs"))
+# Two blob roots — content-addressed materials (admin uploads, dedup'd)
+# and per-response directories (one dir per submission, no dedup).
+MATERIALS_DIR = Path(
+    os.environ.get(
+        "GLUCK_FORMS_MATERIALS_DIR", "/var/lib/gluck-forms-blobs/materials"
+    )
+)
+RESPONSES_DIR = Path(
+    os.environ.get(
+        "GLUCK_FORMS_RESPONSES_DIR", "/var/lib/gluck-forms-blobs/responses"
+    )
+)
+MAX_MATERIAL_MB = int(os.environ.get("GLUCK_FORMS_MAX_MATERIAL_MB", "25"))
 PORT = int(os.environ.get("PORT", "9095"))
 
 OIDC_ISSUER = os.environ.get("GLUCK_FORMS_OIDC_ISSUER", "https://auth.kelliher.info")
@@ -85,7 +97,8 @@ BLOB_KINDS = {"file", "signature"}
 # ── App / DB ──────────────────────────────────────────────────────────────
 app = Flask(__name__, template_folder="templates")
 app.config["MAX_CONTENT_LENGTH"] = 128 * 1024 * 1024  # 128 MiB hard cap
-BLOB_ROOT.mkdir(parents=True, exist_ok=True)
+MATERIALS_DIR.mkdir(parents=True, exist_ok=True)
+RESPONSES_DIR.mkdir(parents=True, exist_ok=True)
 
 db_lock = threading.Lock()
 db = duckdb.connect(DB_PATH)
@@ -534,10 +547,37 @@ def validate_field_spec(spec: dict, ord_seen: set, name_seen: set, default_ord: 
 
 
 # ── Blob storage ──────────────────────────────────────────────────────────
-def store_bytes(data: bytes) -> tuple[str, str]:
-    """Content-address ``data`` under BLOB_ROOT. Returns (sha256, path)."""
+# MIME → extension for per-response filenames.
+_MIME_EXT = {
+    "application/pdf": "pdf",
+    "image/svg+xml": "svg",
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/gif": "gif",
+    "image/webp": "webp",
+    "application/json": "json",
+    "text/plain": "txt",
+    "text/markdown": "md",
+    "text/csv": "csv",
+    "text/html": "html",
+    "application/zip": "zip",
+}
+
+
+def _ext_for_mime(mime: str) -> str:
+    return _MIME_EXT.get((mime or "").lower(), "bin")
+
+
+def _sanitize_field_name(name: str) -> str:
+    # field names are already validated by FIELD_NAME_RE, but be defensive.
+    return re.sub(r"[^a-zA-Z0-9_-]", "_", name)[:64] or "blob"
+
+
+def store_material_bytes(data: bytes) -> tuple[str, str]:
+    """Content-address ``data`` under MATERIALS_DIR. Returns (sha256, path)."""
     sha = hashlib.sha256(data).hexdigest()
-    dest = BLOB_ROOT / sha[:2] / sha
+    dest = MATERIALS_DIR / sha[:2] / sha
     if not dest.exists():
         dest.parent.mkdir(parents=True, exist_ok=True)
         tmp = dest.with_suffix(".tmp")
@@ -546,8 +586,43 @@ def store_bytes(data: bytes) -> tuple[str, str]:
     return sha, str(dest)
 
 
+def _response_dir(response_id: int) -> Path:
+    d = RESPONSES_DIR / str(response_id)
+    if not d.exists():
+        d.mkdir(parents=True, exist_ok=True)
+        try:
+            os.chmod(d, 0o700)
+        except OSError:
+            pass
+    return d
+
+
+def store_response_bytes(
+    response_id: int, field_name: str, mime: str, data: bytes
+) -> tuple[str, str]:
+    """Write ``data`` under ``responses/<response_id>/<field>.<ext>``. If
+    that filename already exists (multi-file field), append ``-N``.
+    Returns (sha256, absolute path)."""
+    sha = hashlib.sha256(data).hexdigest()
+    d = _response_dir(response_id)
+    base = _sanitize_field_name(field_name)
+    ext = _ext_for_mime(mime)
+    candidate = d / f"{base}.{ext}"
+    if candidate.exists():
+        n = 1
+        while True:
+            candidate = d / f"{base}-{n}.{ext}"
+            if not candidate.exists():
+                break
+            n += 1
+    tmp = candidate.with_suffix(candidate.suffix + ".tmp")
+    tmp.write_bytes(data)
+    tmp.rename(candidate)
+    return sha, str(candidate)
+
+
 def record_blob(response_id: int, field_name: str, filename, mime: str, data: bytes):
-    sha, path = store_bytes(data)
+    sha, path = store_response_bytes(response_id, field_name, mime, data)
     blob_id = next_id("form_blob")
     db.execute(
         """INSERT INTO form_blob (id, response_id, field_name, filename, mime,
