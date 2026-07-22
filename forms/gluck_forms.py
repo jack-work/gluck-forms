@@ -4,7 +4,7 @@ One Flask process, one DuckDB, two Caddy sites, routed by Host header:
 
 - ``forms.<base>``  — admin API + response reading. Gated by Authelia
   forward-auth or ``Authorization: Bearer <jwt>`` (validated against
-  Authelia's JWKS). Requires the ``gluck-forms-admin`` group.
+  Authelia's JWKS). Requires the ``forms-admin`` group.
 - ``f.<base>``      — public form-filler. No auth. The token in the URL
   (``f.<base>/<token>``) is the capability; we compare
   ``sha256(token) == form_token.token_hash`` in constant time.
@@ -73,7 +73,7 @@ OIDC_USERINFO_URL = os.environ.get(
     "GLUCK_FORMS_OIDC_USERINFO_URL", "http://127.0.0.1:9091/api/oidc/userinfo"
 )
 
-ADMIN_GROUP = "gluck-forms-admin"
+ADMIN_GROUP = "forms-admin"
 ADMIN_HOST = os.environ.get("GLUCK_FORMS_ADMIN_HOST", "forms.kelliher.info")
 PUBLIC_HOST = os.environ.get("GLUCK_FORMS_PUBLIC_HOST", "f.kelliher.info")
 

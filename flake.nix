@@ -101,7 +101,7 @@
                 ];
               };
               requireAuth = true;
-              requiredGroups = [ "gluck-forms-admin" ];
+              requiredGroups = [ "forms-admin" ];
             })
 
             {

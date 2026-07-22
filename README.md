@@ -11,7 +11,7 @@ There are two hosts, both proxied to the same backend port (default
 
 | Host | Auth | What lives here |
 | --- | --- | --- |
-| `forms.<base>` | Authelia 2FA (forward-auth) **or** `Authorization: Bearer <jwt>` validated against Authelia's JWKS. Requires the `gluck-forms-admin` group. | Admin API — create forms, mint tokens, read responses, download blobs. |
+| `forms.<base>` | Authelia 2FA (forward-auth) **or** `Authorization: Bearer <jwt>` validated against Authelia's JWKS. Requires the `forms-admin` group. | Admin API — create forms, mint tokens, read responses, download blobs. |
 | `f.<base>` | **None**. The URL token is the capability. `sha256(token) == form_token.token_hash` is checked in constant time. | Public form filler — `f.<base>/<token>` renders the form; `POST` submits it. |
 
 Trust boundaries:
@@ -180,7 +180,7 @@ services.gluck-forms.enable = true;
 
 That registers **two** sites into `services.kelliher-web.sites`:
 
-- `gluck-forms-admin` → `forms.<baseDomain>`, `requireAuth = true`
+- `forms-admin` → `forms.<baseDomain>`, `requireAuth = true`
 - `gluck-forms-public` → `f.<baseDomain>`, `requireAuth = false`
 
 Both proxy to the same loopback port. The service runs as a
@@ -192,7 +192,7 @@ You'll also want (outside this repo):
 - Authelia OIDC client `gforms-cli` for CLI/agent access.
 - Authelia access-control rule requiring 2FA on `forms.<baseDomain>`
   (2FA is *not* set on `f.<baseDomain>` — that's the whole point).
-- lldap group `gluck-forms-admin` with your admin users in it.
+- lldap group `forms-admin` with your admin users in it.
 
 ## Local dev
 
