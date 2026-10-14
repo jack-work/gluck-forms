@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    gluck-service-lib.url = "github:jack-work/gluck-service-lib";
+    gluck-service-lib.url = "github:jack-work/gluck-service-lib/09c232a04f956c6c941898c43dade1a34f98e0e8";
     gluck-service-lib.inputs.nixpkgs.follows = "nixpkgs";
   };
 
@@ -36,12 +36,6 @@
         {
           options.services.gluck-forms = {
             enable = lib.mkEnableOption "gluck-forms (admin API on forms.<base>, public filler on f.<base>)";
-
-            port = lib.mkOption {
-              type = lib.types.port;
-              default = 9095;
-              description = "Loopback port for the forms backend. Both sites proxy here; the app routes by Host header.";
-            };
           };
 
           # Two Caddy sites, one backend. `mkPythonService` gives us the
@@ -52,7 +46,7 @@
               inherit config lib pkgs;
               name = "gluck-forms";
               subdomain = "forms";
-              port = cfg.port;
+              socket = true;
               entrypoint = "${formsSrc pkgs}/gluck_forms.py";
               pythonPackages = ps: with ps; [
                 flask
@@ -136,7 +130,7 @@
                 subdomains = [ "f" ];
                 requireAuth = false;
                 requiredGroups = [ ];
-                proxyTo = cfg.port;
+                proxySocket = "gluck-forms.service";
               };
             }
           ]);
@@ -155,6 +149,33 @@
             export PORT=9095
           '';
         };
+      });
+
+      checks = forAllSystems (pkgs: {
+        socket = pkgs.runCommand "gluck-forms-socket" {
+          SOCKET_CASES = builtins.toJSON [
+            {
+              name = "forms";
+              entry = "${formsSrc pkgs}/gluck_forms.py";
+              port = 29095;
+              env = {
+                GLUCK_FORMS_DB = "@TMP@/forms.duckdb";
+                GLUCK_FORMS_MATERIALS_DIR = "@TMP@/materials";
+                GLUCK_FORMS_RESPONSES_DIR = "@TMP@/responses";
+              };
+              host = "forms.kelliher.info";
+              method = "POST";
+              path = "/forms";
+              body = "{}";
+              anonymous = 401;
+              believed = 403;
+            }
+          ];
+        } ''
+          set -o pipefail
+          export SOCKET_ACTIVATE=${pkgs.systemd}/bin/systemd-socket-activate
+          ${pyEnv pkgs}/bin/python -u ${./tests/test_socket.py} 2>&1 | tee $out
+        '';
       });
 
       packages = forAllSystems (pkgs: {

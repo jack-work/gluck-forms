@@ -1,6 +1,9 @@
 """gluck-forms — a generic forms service.
 
-One Flask process, one DuckDB, two Caddy sites, routed by Host header:
+One Flask process, one DuckDB, two Caddy sites, routed by Host header. Each
+site reaches the process through its own unix socket, handed over by systemd
+and reachable only by Caddy, so the Host it sees is the one that chose the
+site:
 
 - ``forms.<base>``  — admin API + response reading. Gated by Authelia
   forward-auth or ``Authorization: Bearer <jwt>`` (validated against
@@ -27,6 +30,8 @@ import json
 import os
 import re
 import secrets
+import socket
+import sys
 import threading
 import time
 from collections import defaultdict, deque
@@ -1836,7 +1841,19 @@ def not_found(_):
     return jsonify(error="not found"), 404
 
 
+def inherited_sockets():
+    if os.environ.get("LISTEN_PID") != str(os.getpid()):
+        return []
+    return [socket.socket(fileno=3 + i) for i in range(int(os.environ.get("LISTEN_FDS", "0")))]
+
+
 if __name__ == "__main__":
     from waitress import serve
 
-    serve(app, host="127.0.0.1", port=PORT, threads=6)
+    sockets = inherited_sockets()
+    if sockets:
+        serve(app, sockets=sockets, threads=6)
+    elif os.environ.get("KWEB_LISTEN") == "socket":
+        sys.exit("no listening socket from systemd; refusing to fall back to TCP")
+    else:
+        serve(app, host="127.0.0.1", port=PORT, threads=6)
