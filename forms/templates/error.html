@@ -1,21 +1,31 @@
 <!doctype html>
-<html lang="en">
+<html lang="en"{% if scheme %} data-scheme="{{ scheme }}"{% endif %}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Not available</title>
+<link rel="stylesheet" href="/static/zanni/fonts.css">
+<link rel="stylesheet" href="/static/zanni/gesso.css">
+<link rel="stylesheet" href="/static/zanni/fontpack.css">
 <style>
-  :root { --bg: #fafaf9; --fg: #111; --muted: #999; --accent: #b45309; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #0c0a09; --fg: #f5f5f4; --muted: #78716c; --accent: #fbbf24; }
+  :root {
+    color-scheme: light dark;
+    --bg: var(--z-ground);
+    --fg: var(--z-ink);
+    --muted: var(--z-muted);
+    --line: var(--z-line);
+    --accent: var(--z-accent);
+    --danger: var(--z-fail);
+    --card: light-dark(#f6ede2, var(--stage-2));
+    --input-bg: light-dark(#fbf6f0, #140a0b);
   }
-  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 ui-sans-serif, system-ui, sans-serif; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.5 var(--fontpack-prose); }
   main { max-width: 480px; margin: 5rem auto; padding: 2rem 1.5rem; text-align: center; }
-  h1 { font-size: 1.4rem; font-weight: 500; letter-spacing: -0.02em; margin: 0 0 0.5rem; }
+  h1 { font-family: var(--fontpack-display); font-size: 1.82rem; font-weight: 400; letter-spacing: 0.02em; margin: 0 0 0.5rem; }
   p { color: var(--muted); }
 </style>
 </head>
-<body>
+<body class="gesso">
 <main>
   <h1>Not available</h1>
   <p>{{ message }}</p>

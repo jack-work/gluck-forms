@@ -1,5 +1,23 @@
 {
   "nodes": {
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "gluck-service-lib": {
       "inputs": {
         "nixpkgs": [
@@ -40,7 +58,44 @@
     "root": {
       "inputs": {
         "gluck-service-lib": "gluck-service-lib",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "zanni": "zanni"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "zanni": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792157452,
+        "narHash": "sha256-YRrAanQmvgrtpPHi+7GRtuzGF8gQiDA7DYhUEus5Uhs=",
+        "owner": "jack-work",
+        "repo": "zanni",
+        "rev": "e1a5925a2b4f081b74a236a87c85f76d24160d2b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jack-work",
+        "repo": "zanni",
+        "type": "github"
       }
     }
   },

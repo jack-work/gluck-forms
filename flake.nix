@@ -5,10 +5,12 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     gluck-service-lib.url = "github:jack-work/gluck-service-lib/09c232a04f956c6c941898c43dade1a34f98e0e8";
     gluck-service-lib.inputs.nixpkgs.follows = "nixpkgs";
+    zanni.url = "github:jack-work/zanni";
+    zanni.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
-    { self, nixpkgs, gluck-service-lib, ... }:
+    { self, nixpkgs, gluck-service-lib, zanni, ... }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
@@ -26,6 +28,10 @@
         cp ${./forms/gluck_forms.py} $out/gluck_forms.py
         mkdir -p $out/templates
         cp ${./forms/templates}/*.html $out/templates/
+        mkdir -p $out/static/zanni
+        z=${zanni.packages.${pkgs.stdenv.hostPlatform.system}.assets}
+        cp $z/gesso/gesso.css $z/fontpack/fontpack.css $z/fontpack/fonts.css $out/static/zanni/
+        cp -r $z/fontpack/fonts $out/static/zanni/fonts
       '';
 
       nixosModule =
@@ -152,6 +158,10 @@
       });
 
       checks = forAllSystems (pkgs: {
+        scheme = pkgs.runCommand "gluck-forms-scheme" { } ''
+          set -o pipefail
+          GLUCK_FORMS_SRC=${formsSrc pkgs} ${pyEnv pkgs}/bin/python -u ${./tests/test_scheme.py} 2>&1 | tee $out
+        '';
         socket = pkgs.runCommand "gluck-forms-socket" {
           SOCKET_CASES = builtins.toJSON [
             {

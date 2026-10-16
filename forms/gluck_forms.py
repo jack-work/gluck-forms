@@ -213,9 +213,20 @@ def bearer_to_remote_headers():
     return None
 
 
+SCHEMES = {"light", "dark"}
+
+
+@app.context_processor
+def reader_scheme():
+    scheme = request.cookies.get("zanni-scheme")
+    return {"scheme": scheme if scheme in SCHEMES else None}
+
+
 # ── Security headers ──────────────────────────────────────────────────────
 @app.after_request
 def security_headers(resp: Response) -> Response:
+    if resp.mimetype == "text/html":
+        resp.vary.add("Cookie")
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("Referrer-Policy", "no-referrer")
     resp.headers.setdefault("X-Frame-Options", "DENY")

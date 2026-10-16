@@ -1,34 +1,26 @@
 <!doctype html>
-<html lang="en">
+<html lang="en"{% if scheme %} data-scheme="{{ scheme }}"{% endif %}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ form.title }} · admin</title>
+<link rel="stylesheet" href="/static/zanni/fonts.css">
+<link rel="stylesheet" href="/static/zanni/gesso.css">
+<link rel="stylesheet" href="/static/zanni/fontpack.css">
 <style>
   :root {
-    --bg: #fafaf9;
-    --fg: #111;
-    --muted: #999;
-    --line: #e5e5e2;
-    --accent: #b45309;
-    --danger: #dc2626;
-    --card: #fff;
-    --input-bg: #fff;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0c0a09;
-      --fg: #f5f5f4;
-      --muted: #78716c;
-      --line: #292524;
-      --accent: #fbbf24;
-      --danger: #f87171;
-      --card: #1c1917;
-      --input-bg: #0c0a09;
-    }
+    color-scheme: light dark;
+    --bg: var(--z-ground);
+    --fg: var(--z-ink);
+    --muted: var(--z-muted);
+    --line: var(--z-line);
+    --accent: var(--z-accent);
+    --danger: var(--z-fail);
+    --card: light-dark(#f6ede2, var(--stage-2));
+    --input-bg: light-dark(#fbf6f0, #140a0b);
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.5 var(--fontpack-prose); }
   main { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
@@ -38,7 +30,7 @@
     gap: 1.5rem; margin-bottom: 2rem;
     padding-bottom: 1rem; border-bottom: 1px solid var(--line);
   }
-  h1 { font-size: 1.6rem; font-weight: 500; letter-spacing: -0.02em; margin: 0 0 0.4rem; }
+  h1 { font-family: var(--fontpack-display); font-size: 2.08rem; font-weight: 400; letter-spacing: 0.02em; margin: 0 0 0.4rem; }
   .meta { color: var(--muted); font-size: 0.8rem; line-height: 1.7; }
   .meta .sep { margin: 0 0.4rem; opacity: 0.5; }
   .badge {
@@ -47,7 +39,7 @@
     vertical-align: middle;
   }
   .badge.frozen { color: var(--accent); border-color: var(--accent); }
-  .badge.ok { color: #16a34a; border-color: #16a34a; }
+  .badge.ok { color: var(--z-ok); border-color: var(--z-ok); }
   .badge.warn { color: var(--danger); border-color: var(--danger); }
   .badge.muted { color: var(--muted); border-color: var(--line); }
   section { margin: 2.5rem 0; }
@@ -73,9 +65,9 @@
   }
   button:hover, .btn:hover { border-color: var(--accent); color: var(--accent); }
   button.primary {
-    background: var(--accent); color: #fff; border-color: var(--accent);
+    background: var(--accent); color: var(--z-on-accent); border-color: var(--accent);
   }
-  button.primary:hover { opacity: 0.9; color: #fff; }
+  button.primary:hover { opacity: 0.9; color: var(--z-on-accent); }
   button.danger {
     color: var(--danger); border-color: transparent;
     padding: 0.2rem 0.4rem;
@@ -161,7 +153,7 @@
   .toast.show { opacity: 1; }
 </style>
 </head>
-<body>
+<body class="gesso">
 <main data-slug="{{ form.slug }}">
   <div class="crumb"><a href="/admin">← all forms</a></div>
   <header class="page">

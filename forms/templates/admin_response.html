@@ -1,34 +1,26 @@
 <!doctype html>
-<html lang="en">
+<html lang="en"{% if scheme %} data-scheme="{{ scheme }}"{% endif %}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Response #{{ response.id }} · {{ form.title }}</title>
+<link rel="stylesheet" href="/static/zanni/fonts.css">
+<link rel="stylesheet" href="/static/zanni/gesso.css">
+<link rel="stylesheet" href="/static/zanni/fontpack.css">
 <style>
   :root {
-    --bg: #fafaf9;
-    --fg: #111;
-    --muted: #999;
-    --line: #e5e5e2;
-    --accent: #b45309;
-    --danger: #dc2626;
-    --card: #fff;
-    --input-bg: #fff;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0c0a09;
-      --fg: #f5f5f4;
-      --muted: #78716c;
-      --line: #292524;
-      --accent: #fbbf24;
-      --danger: #f87171;
-      --card: #1c1917;
-      --input-bg: #0c0a09;
-    }
+    color-scheme: light dark;
+    --bg: var(--z-ground);
+    --fg: var(--z-ink);
+    --muted: var(--z-muted);
+    --line: var(--z-line);
+    --accent: var(--z-accent);
+    --danger: var(--z-fail);
+    --card: light-dark(#f6ede2, var(--stage-2));
+    --input-bg: light-dark(#fbf6f0, #140a0b);
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.55 var(--fontpack-prose); }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
 
@@ -45,7 +37,7 @@
     margin-bottom: 2rem;
   }
   header.card-head h1 {
-    font-size: 1.8rem; font-weight: 500; letter-spacing: -0.02em;
+    font-family: var(--fontpack-display); font-size: 2.3rem; font-weight: 400; letter-spacing: 0.02em;
     margin: 0 0 0.5rem;
   }
   header.card-head .sub {
@@ -141,6 +133,7 @@
   /* Print CSS lives in a follow-up commit. */
   @page { margin: 1in; }
   @media print {
+    :root, :root[data-scheme] { color-scheme: light; }
     :root {
       --bg: #fff !important;
       --fg: #000 !important;
@@ -189,7 +182,7 @@
   }
 </style>
 </head>
-<body>
+<body class="gesso">
 
 <nav class="crumbs no-print">
   <a href="/admin">admin</a> ·

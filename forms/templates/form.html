@@ -1,37 +1,29 @@
 <!doctype html>
-<html lang="en">
+<html lang="en"{% if scheme %} data-scheme="{{ scheme }}"{% endif %}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ form_title }}</title>
+<link rel="stylesheet" href="/static/zanni/fonts.css">
+<link rel="stylesheet" href="/static/zanni/gesso.css">
+<link rel="stylesheet" href="/static/zanni/fontpack.css">
 <style>
   :root {
-    --bg: #fafaf9;
-    --fg: #111;
-    --muted: #999;
-    --line: #e5e5e2;
-    --accent: #b45309;
-    --danger: #dc2626;
-    --card: #fff;
-    --input-bg: #fff;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0c0a09;
-      --fg: #f5f5f4;
-      --muted: #78716c;
-      --line: #292524;
-      --accent: #fbbf24;
-      --danger: #f87171;
-      --card: #1c1917;
-      --input-bg: #0c0a09;
-    }
+    color-scheme: light dark;
+    --bg: var(--z-ground);
+    --fg: var(--z-ink);
+    --muted: var(--z-muted);
+    --line: var(--z-line);
+    --accent: var(--z-accent);
+    --danger: var(--z-fail);
+    --card: light-dark(#f6ede2, var(--stage-2));
+    --input-bg: light-dark(#fbf6f0, #140a0b);
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.5 var(--fontpack-prose); }
   main { max-width: 640px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
   header { margin-bottom: 2rem; }
-  h1 { font-size: 1.75rem; font-weight: 500; letter-spacing: -0.02em; margin: 0 0 0.5rem; }
+  h1 { font-family: var(--fontpack-display); font-size: 2.27rem; font-weight: 400; letter-spacing: 0.02em; margin: 0 0 0.5rem; }
   .desc { color: var(--muted); }
   .desc p:first-child { margin-top: 0; }
   .desc p:last-child { margin-bottom: 0; }
@@ -59,7 +51,7 @@
   .md-block p:first-child { margin-top: 0; }
   .md-block p:last-child { margin-bottom: 0; }
   .actions { display: flex; justify-content: flex-end; margin-top: 2.5rem; }
-  button.submit { padding: 0.6rem 1.4rem; background: var(--accent); color: #fff; border: 1px solid var(--accent); border-radius: 4px; font: inherit; cursor: pointer; }
+  button.submit { padding: 0.6rem 1.4rem; background: var(--accent); color: var(--z-on-accent); border: 1px solid var(--accent); border-radius: 4px; font: inherit; cursor: pointer; }
   button.submit:hover { opacity: 0.9; }
   footer { text-align: center; color: var(--muted); font-size: 0.72rem; margin-top: 3rem; }
   /* Signature widget */
@@ -111,7 +103,7 @@
   .material-sub { color: var(--muted); font-size: 0.72rem; margin-top: 0.15rem; }
 </style>
 </head>
-<body>
+<body class="gesso">
 <main>
   <header>
     <h1>{{ form_title }}</h1>

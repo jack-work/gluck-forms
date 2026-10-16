@@ -1,37 +1,29 @@
 <!doctype html>
-<html lang="en">
+<html lang="en"{% if scheme %} data-scheme="{{ scheme }}"{% endif %}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Admin · gluck-forms</title>
+<link rel="stylesheet" href="/static/zanni/fonts.css">
+<link rel="stylesheet" href="/static/zanni/gesso.css">
+<link rel="stylesheet" href="/static/zanni/fontpack.css">
 <style>
   :root {
-    --bg: #fafaf9;
-    --fg: #111;
-    --muted: #999;
-    --line: #e5e5e2;
-    --accent: #b45309;
-    --danger: #dc2626;
-    --card: #fff;
-    --input-bg: #fff;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0c0a09;
-      --fg: #f5f5f4;
-      --muted: #78716c;
-      --line: #292524;
-      --accent: #fbbf24;
-      --danger: #f87171;
-      --card: #1c1917;
-      --input-bg: #0c0a09;
-    }
+    color-scheme: light dark;
+    --bg: var(--z-ground);
+    --fg: var(--z-ink);
+    --muted: var(--z-muted);
+    --line: var(--z-line);
+    --accent: var(--z-accent);
+    --danger: var(--z-fail);
+    --card: light-dark(#f6ede2, var(--stage-2));
+    --input-bg: light-dark(#fbf6f0, #140a0b);
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.5 var(--fontpack-prose); }
   main { max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
   header { margin-bottom: 2rem; display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
-  h1 { font-size: 1.75rem; font-weight: 500; letter-spacing: -0.02em; margin: 0; }
+  h1 { font-family: var(--fontpack-display); font-size: 2.27rem; font-weight: 400; letter-spacing: 0.02em; margin: 0; }
   .who { color: var(--muted); font-size: 0.8rem; }
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
@@ -51,7 +43,7 @@
   footer { text-align: center; color: var(--muted); font-size: 0.72rem; margin-top: 3rem; }
 </style>
 </head>
-<body>
+<body class="gesso">
 <main>
   <header>
     <h1>gluck-forms · admin</h1>
